@@ -23,7 +23,7 @@ def all_data():
 
 def load_demos():
     for name,raw in demo_files():
-        mapping=detect_mapping(raw.columns)
+        mapping=detect_mapping(raw.columns,raw)
         df=normalize_frame(raw,mapping,name)
         st.session_state.datasets[name]=df
         st.session_state.recent.insert(0,{"file":name,"rows":len(df),"status":validate_frame(df)["status"]})
@@ -40,7 +40,7 @@ def render_chart(df,x,y,color="cell_id",title=None):
 def store_upload(upload,manual=None):
     try:
         raw=pd.read_excel(upload)
-        mapping=detect_mapping(raw.columns)
+        mapping=detect_mapping(raw.columns,raw)
         if manual: mapping.update(manual)
         normalized=normalize_frame(raw,mapping,upload.name)
         st.session_state.datasets[upload.name]=normalized

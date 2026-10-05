@@ -7,7 +7,7 @@ uploads=st.file_uploader("Upload battery test workbooks (.xlsx)",type=["xlsx"],a
 if st.button("Load generated demo workbooks"):
     for name,raw in demo_files():
         from src.battery import detect_mapping,normalize_frame
-        df=normalize_frame(raw,detect_mapping(raw.columns),name); st.session_state.datasets[name]=df
+        df=normalize_frame(raw,detect_mapping(raw.columns,raw),name); st.session_state.datasets[name]=df
         st.session_state.recent.insert(0,{"file":name,"rows":len(df),"status":validate_frame(df)["status"]})
     st.rerun()
 if uploads:
@@ -15,7 +15,7 @@ if uploads:
         with st.expander(upload.name,expanded=True):
             try:
                 raw=pd.read_excel(upload); st.caption(f"{len(raw):,} rows · {len(raw.columns)} source columns")
-                detected=__import__('src.battery',fromlist=['detect_mapping']).detect_mapping(raw.columns)
+                detected=__import__('src.battery',fromlist=['detect_mapping']).detect_mapping(raw.columns,raw)
                 st.write("Detected mapping")
                 mapping={}
                 cols=list(raw.columns)

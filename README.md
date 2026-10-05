@@ -9,6 +9,7 @@ VoltIQ is a local Streamlit prototype for importing battery cycler spreadsheets,
 - Validation for missing/invalid values, duplicate timestamps, cycle gaps, voltage/temperature bounds and timestamp ordering
 - Canonical Pandas schema independent of source column names
 - Interactive Plotly charts with cycle filters, selection, hover, zoom, pan and image export
+- Step-bounded voltage-versus-capacity curves and reference-cycle capacity retention on Battery Analysis
 - Cell comparisons, capacity retention curves and observed linear trends
 - Capacity, voltage, current, temperature, retention, fade, estimated coulombic efficiency and integrated net energy metrics
 - CSV and multi-sheet Excel downloads, plus an HTML summary report
@@ -30,7 +31,7 @@ On Dashboard, click **Generate Demo Data** to load three slightly different cell
 
 ## Architecture
 
-`src/battery.py` owns ingestion normalization, aliases, validation, demo generation and metrics. `src/ui.py` contains reusable Streamlit state and chart helpers. `app.py` is the Dashboard; `pages/` contains workflow pages. All analysis operates on the canonical schema: timestamp, test_id, cell_id, cycle, step, voltage, current, capacity, energy and temperature.
+`src/battery.py` owns ingestion normalization, aliases, validation, demo generation and metrics. `src/ui.py` contains reusable Streamlit state and chart helpers. `app.py` is the Dashboard; `pages/` contains workflow pages. The canonical schema includes timestamp, test_id, cell_id, module, cycle, step, step_type, voltage, current, capacity, specific_capacity, energy and temperature. Module, step type and specific capacity are optional source mappings.
 
 Flow: Excel → column mapping → validation → canonical data → metrics/charts → comparison and export. The prototype is file-based; future work can add database/cloud storage and cycler or lab-system adapters without coupling metrics to Excel.
 
@@ -42,10 +43,12 @@ Flow: Excel → column mapping → validation → canonical data → metrics/cha
 - Net energy is trapezoidal integration of signed power over elapsed time, converted from joules to Wh; the reported sign depends on source current convention.
 - Coulombic efficiency is an estimated discharge/charge capacity endpoint ratio grouped by cycle. It is convention-dependent and is not displayed as available if charge/discharge records cannot be paired.
 - Linear degradation lines describe observed values only and do not predict useful life.
+- Step-bounded voltage curves use mapped step labels when available. If only current is available, positive, negative and zero current are labeled Charge, Discharge and Rest. Current direction cannot distinguish CC from CCCV.
+- Capacity retention uses the maximum selected capacity value in each cycle, divided by the selected reference cycle's maximum. Cycle order follows first appearance in the source data.
 
 ## Tests
 
-Run `pytest`. Tests cover aliases, normalization, validation, retention, power and integrated energy behavior.
+Run `python -m unittest discover -s tests -v` for focused tests covering step boundaries, label normalization, nonconsecutive cycle IDs, reference-cycle retention and invalid rows.
 
 ## Future Roadmap
 

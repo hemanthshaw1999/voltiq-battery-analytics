@@ -1,12 +1,24 @@
 import streamlit as st
+import pandas as pd
 from src.ui import init,header,all_data,render_chart
 init(); header("Visualization","Explore voltage, current, capacity, energy, temperature and power.")
 df=all_data()
 if df.empty: st.info("Load demo data on Dashboard or upload a workbook first."); st.stop()
 cells=sorted(df.cell_id.dropna().unique()); selected=st.multiselect("Cells / tests",cells,default=cells)
 view=df[df.cell_id.isin(selected)].copy()
-lo,hi=int(view.cycle.min()),int(view.cycle.max()); cr=st.slider("Cycle range",lo,hi,(lo,hi))
-view=view[view.cycle.between(*cr)]
+cycle_values=view.cycle.dropna().drop_duplicates().tolist()
+numeric_cycles=pd.to_numeric(view.cycle,errors="coerce")
+if cycle_values and pd.api.types.is_numeric_dtype(view.cycle) and numeric_cycles.notna().sum()==view.cycle.notna().sum():
+    low,high=numeric_cycles.min(),numeric_cycles.max()
+    if float(low).is_integer() and float(high).is_integer(): low,high=int(low),int(high)
+    cr=st.slider("Cycle range",low,high,(low,high))
+    view=view[numeric_cycles.between(*cr)]
+elif cycle_values:
+    chosen_cycles=st.multiselect("Cycle(s)",cycle_values,default=[cycle_values[-1]])
+    view=view[view.cycle.isin(chosen_cycles)]
+else:
+    st.warning("No valid cycle identifiers were found.")
+    st.stop()
 a,b,c=st.columns(3)
 x=a.selectbox("X axis",["timestamp","cycle","capacity"],format_func=str.title,index=1)
 y=b.selectbox("Y axis",["voltage","current","capacity","energy","temperature","power"],format_func=str.title)
