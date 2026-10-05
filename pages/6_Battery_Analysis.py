@@ -2,6 +2,7 @@ import plotly.express as px
 import streamlit as st
 
 from src.battery import (
+    apply_step_type_mapping,
     available_step_types,
     capacity_retention_by_cycle,
     prepare_voltage_capacity_data,
@@ -33,12 +34,50 @@ if identities:
 else:
     selected = data
 
+chosen_module = None
 if "module" in selected and selected.module.notna().any():
     modules = selected.module.dropna().drop_duplicates().tolist()
     chosen_module = st.selectbox("Module / program", modules)
     selected = selected[selected.module == chosen_module]
 else:
     st.caption("No module or program column was detected in this file.")
+
+if "step" in selected and selected.step.notna().any():
+    step_ids = selected.loc[selected.step.notna(), "step"].drop_duplicates().tolist()
+    source_has_step_types = (
+        "step_type" in selected
+        and selected.step_type.notna().any()
+        and selected.step_type.astype(str).str.strip().ne("").any()
+    )
+    step_type_options = [
+        "Auto (source label / current direction)",
+        "Rest",
+        "CC Charge",
+        "CCCV Charge",
+        "CC Discharge",
+        "CCCV Discharge",
+        "Charge",
+        "Discharge",
+        "Other",
+    ]
+    step_scope = "_".join(str(value) for value in chosen_identity) if identities else "all"
+    if chosen_module is not None:
+        step_scope += f"_{chosen_module}"
+    overrides = {}
+    with st.expander("Map Step IDs to Step Types (optional)", expanded=not source_has_step_types):
+        st.caption(
+            "Use this when the workbook has numeric Step IDs but no step-type labels. "
+            "Auto uses source labels or current direction; current direction cannot distinguish CC from CCCV."
+        )
+        for step_id in step_ids:
+            choice = st.selectbox(
+                f"Step {step_id}",
+                step_type_options,
+                key=f"step_type_map_{step_scope}_{step_id!r}",
+            )
+            if choice != step_type_options[0]:
+                overrides[step_id] = choice
+    selected = apply_step_type_mapping(selected, overrides)
 
 capacity_options = [
     column for column in ["specific_capacity", "capacity"]

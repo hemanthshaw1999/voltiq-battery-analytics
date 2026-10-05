@@ -3,6 +3,7 @@ import unittest
 import pandas as pd
 
 from src.battery import (
+    apply_step_type_mapping,
     available_step_types,
     capacity_retention_by_cycle,
     detect_mapping,
@@ -61,6 +62,24 @@ class BatteryAnalysisTests(unittest.TestCase):
         self.assertEqual(len(plot), 4)
         self.assertEqual(set(plot.step_type), {"CCCV Discharge", "CC Charge"})
         self.assertEqual(plot.step_block.nunique(), 2)
+
+    def test_numeric_step_ids_can_be_mapped_to_cc_and_cccv_types(self):
+        frame = sample_frame().drop(columns="step_type")
+        mapped = apply_step_type_mapping(
+            frame,
+            {10: "CCCV Discharge", 30: "CC Charge"},
+        )
+        plot, skipped = prepare_voltage_capacity_data(
+            mapped,
+            cycles=["111"],
+            step_types=["CCCV Discharge", "CC Charge"],
+            capacity_column="specific_capacity",
+        )
+        self.assertEqual(skipped, 0)
+        self.assertEqual(len(plot), 4)
+        self.assertEqual(set(plot.step_type), {"CCCV Discharge", "CC Charge"})
+        self.assertEqual(plot.step_block.nunique(), 2)
+        self.assertNotIn("step_type", frame)
 
     def test_step_types_are_inferred_from_current_when_labels_are_absent(self):
         frame = sample_frame().drop(columns="step_type")

@@ -188,6 +188,23 @@ def with_step_blocks(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def apply_step_type_mapping(df: pd.DataFrame, mapping: dict) -> pd.DataFrame:
+    """Apply user-selected labels to step IDs without changing the source frame."""
+    out = df.copy()
+    if "step" not in out or not mapping:
+        return out
+    if "step_type" not in out:
+        out["step_type"] = pd.Series(index=out.index, dtype=object)
+    else:
+        out["step_type"] = out["step_type"].astype(object)
+    for step_id, step_type in mapping.items():
+        if pd.isna(step_id) or step_type is None or not str(step_type).strip():
+            continue
+        mask = out["step"].eq(step_id).fillna(False)
+        out.loc[mask, "step_type"] = str(step_type)
+    return out
+
+
 def available_step_types(df: pd.DataFrame):
     if df.empty:
         return []
